@@ -47,7 +47,9 @@ A simple web app for organizing pick-up sports games. No login required.
    - If Vercel added `POSTGRES_URL` when you connected Postgres, add **Environment Variable** `DATABASE_URL` with the **same value** as `POSTGRES_URL` (the full connection string from the Storage tab).
    - Otherwise set `DATABASE_URL` to your Postgres connection string (include `?sslmode=require`).
 
-5. **Deploy**: Vercel will run `prisma generate`, `prisma migrate deploy`, and `next build`. After deploy, open your app URL and test (create a game, share link, join, manage).
+5. **Deploy**: Trigger a deploy (or redeploy). Vercel will run `prisma generate`, `prisma migrate deploy`, and `next build`. After deploy, open your app URL and test (create a game, share link, join, manage).
+
+**If the build fails with "Environment variable not found: DATABASE_URL"** → Go to the project in Vercel → **Settings** → **Environment Variables** → add `DATABASE_URL` with your Postgres connection string (copy from **Storage** → your Postgres DB → **Connect** tab), then **Redeploy**.
 
 ## Testing with others
 
