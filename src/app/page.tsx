@@ -1,101 +1,228 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+
+const SPORTS = ["Futsal", "Football", "Volleyball", "Badminton", "Tennis", "Other", "Basketball"];
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [sportType, setSportType] = useState("");
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [venue, setVenue] = useState("");
+  const [feePerHead, setFeePerHead] = useState("");
+  const [maxPlayers, setMaxPlayers] = useState("10");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<{
+    gameId: string;
+    playerLink: string;
+    manageLink: string;
+  } | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/games", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sportType: sportType || SPORTS[0],
+          date,
+          startTime: startTime || "00:00",
+          endTime: endTime || "00:00",
+          venue,
+          feePerHead: feePerHead ? Number(feePerHead) : 0,
+          maxPlayers: maxPlayers ? Number(maxPlayers) : 10,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create game");
+      setResult({
+        gameId: data.gameId,
+        playerLink: data.playerLink,
+        manageLink: data.manageLink,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (result) {
+    const fullPlayerUrl = typeof window !== "undefined" ? `${window.location.origin}${result.playerLink}` : result.playerLink;
+    const fullManageUrl = typeof window !== "undefined" ? `${window.location.origin}${result.manageLink}` : result.manageLink;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md rounded-2xl bg-slate-800/80 border border-emerald-500/30 p-6 shadow-xl">
+          <h2 className="text-xl font-semibold text-emerald-400 mb-4">Game created</h2>
+          <p className="text-slate-300 text-sm mb-4">Share this link with players (they enter name + GCash reference):</p>
+          <div className="flex gap-2 mb-2">
+            <input
+              readOnly
+              value={fullPlayerUrl}
+              className="flex-1 rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-sm text-slate-200"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(fullPlayerUrl)}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+            >
+              Copy
+            </button>
+          </div>
+          <p className="text-slate-400 text-xs mb-4">Keep the manage link private — only you should use it to see players and verify payments.</p>
+          <div className="flex gap-2 mb-6">
+            <input
+              readOnly
+              value={fullManageUrl}
+              className="flex-1 rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-sm text-slate-200"
+            />
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(fullManageUrl)}
+              className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-500"
+            >
+              Copy
+            </button>
+          </div>
+          <div className="flex gap-3">
+            <Link
+              href={result.manageLink}
+              className="flex-1 rounded-lg bg-emerald-600 py-2.5 text-center font-medium text-white hover:bg-emerald-500"
+            >
+              Open manage page
+            </Link>
+            <button
+              type="button"
+              onClick={() => setResult(null)}
+              className="rounded-lg border border-slate-500 py-2.5 px-4 text-slate-300 hover:bg-slate-800"
+            >
+              Create another
+            </button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <h1 className="text-2xl font-bold text-center text-slate-100 mb-1">Pick-Up Games</h1>
+        <p className="text-center text-slate-400 text-sm mb-8">Create a game and share the link. No login.</p>
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl bg-slate-800/80 border border-slate-700 p-6 shadow-xl space-y-4"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Sport</label>
+            <div className="relative">
+              <select
+                value={sportType}
+                onChange={(e) => setSportType(e.target.value)}
+                className="w-full appearance-none rounded-lg bg-slate-900 border border-slate-600 pl-3 pr-9 py-2 text-slate-100"
+              >
+                {SPORTS.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                <svg
+                  className="h-4 w-4 text-slate-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-slate-100"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Start time</label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+                className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">End time</label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-slate-100"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Venue</label>
+            <input
+              type="text"
+              placeholder="e.g. Barangay court, Gym name"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+              required
+              className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-slate-100 placeholder-slate-500"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Fee per head (₱)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                value={feePerHead}
+                onChange={(e) => setFeePerHead(e.target.value)}
+                className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Max players</label>
+              <input
+                type="number"
+                min="1"
+                value={maxPlayers}
+                onChange={(e) => setMaxPlayers(e.target.value)}
+                className="w-full rounded-lg bg-slate-900 border border-slate-600 px-3 py-2 text-slate-100"
+              />
+            </div>
+          </div>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-emerald-600 py-2.5 font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+          >
+            {loading ? "Creating…" : "Create game"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
